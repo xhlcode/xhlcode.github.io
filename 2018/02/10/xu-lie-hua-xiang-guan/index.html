@@ -1,0 +1,849 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+    
+
+<head><meta name="generator" content="Hexo 3.8.0">
+    <meta charset="utf-8">
+    <meta name="keywords" content="序列化相关, 淡定独行">
+    <meta name="description" content="使用序列化类的私有方法巧妙解决部分属性持久化问题
+业务场景
+
+一个计税系统和人力资源系统（HR系统）通过RMI（Remote Method Invocation，远程方法调用）对接，计税系统需要从HR系统获得人员的姓名和基本工资，以作为纳税">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="renderer" content="webkit|ie-stand|ie-comp">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>序列化相关 | 淡定独行</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
+
+    <link rel="stylesheet" type="text/css" href="/libs/awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="/libs/materialize/css/materialize.min.css">
+    <link rel="stylesheet" type="text/css" href="/libs/aos/aos.css">
+    <link rel="stylesheet" type="text/css" href="/libs/animate/animate.min.css">
+    <link rel="stylesheet" type="text/css" href="/libs/lightGallery/css/lightgallery.min.css">
+    <link rel="stylesheet" type="text/css" href="/css/matery.css">
+    <link rel="stylesheet" type="text/css" href="/css/my.css">
+
+    <script src="/libs/jquery/jquery-2.2.0.min.js"></script>
+<link rel="stylesheet" href="/css/prism-tomorrow.css" type="text/css"></head>
+
+</head>
+
+<body>
+
+<header class="navbar-fixed">
+    <nav id="headNav" class="bg-color nav-transparent">
+        <div id="navContainer" class="container">
+            <div class="nav-wrapper">
+                <div class="brand-logo">
+                    <a href="/" class="waves-effect waves-light">
+                        
+                        <img src="/medias/logo.png" class="logo-img hide-on-small-only">
+                        
+                        <span class="logo-span">淡定独行</span>
+                    </a>
+                </div>
+                
+
+<a href="#" data-activates="mobile-nav" class="button-collapse"><i class="fa fa-navicon"></i></a>
+<ul class="right">
+    
+    <li class="hide-on-med-and-down">
+        <a href="/" class="waves-effect waves-light">
+            
+            <i class="fa fa-home"></i>
+            
+            <span>首页</span>
+        </a>
+    </li>
+    
+    <li class="hide-on-med-and-down">
+        <a href="/tags" class="waves-effect waves-light">
+            
+            <i class="fa fa-tags"></i>
+            
+            <span>标签</span>
+        </a>
+    </li>
+    
+    <li class="hide-on-med-and-down">
+        <a href="/categories" class="waves-effect waves-light">
+            
+            <i class="fa fa-bookmark"></i>
+            
+            <span>分类</span>
+        </a>
+    </li>
+    
+    <li class="hide-on-med-and-down">
+        <a href="/archives" class="waves-effect waves-light">
+            
+            <i class="fa fa-archive"></i>
+            
+            <span>归档</span>
+        </a>
+    </li>
+    
+    <li class="hide-on-med-and-down">
+        <a href="/about" class="waves-effect waves-light">
+            
+            <i class="fa fa-user-circle-o"></i>
+            
+            <span>关于</span>
+        </a>
+    </li>
+    
+    <li class="hide-on-med-and-down">
+        <a href="/friends" class="waves-effect waves-light">
+            
+            <i class="fa fa-address-book"></i>
+            
+            <span>友情链接</span>
+        </a>
+    </li>
+    
+    <li>
+        <a id="toggleSearch" class="waves-effect waves-light">
+            <i id="searchIcon" class="mdi-action-search"></i>
+        </a>
+    </li>
+
+</ul>
+
+<div class="side-nav" id="mobile-nav">
+
+    <div class="mobile-head bg-color">
+        
+        <img src="/medias/logo.png" class="logo-img circle responsive-img">
+        
+        <div class="logo-name">淡定独行</div>
+        <div class="logo-desc">
+            
+            www.xhlcode.cn
+            
+        </div>
+    </div>
+
+    
+
+    <ul class="menu-list mobile-menu-list">
+        
+        <li>
+            <a href="/" class="waves-effect waves-light">
+                
+                <i class="fa fa-fw fa-home"></i>
+                
+                首页
+            </a>
+        </li>
+        
+        <li>
+            <a href="/tags" class="waves-effect waves-light">
+                
+                <i class="fa fa-fw fa-tags"></i>
+                
+                标签
+            </a>
+        </li>
+        
+        <li>
+            <a href="/categories" class="waves-effect waves-light">
+                
+                <i class="fa fa-fw fa-bookmark"></i>
+                
+                分类
+            </a>
+        </li>
+        
+        <li>
+            <a href="/archives" class="waves-effect waves-light">
+                
+                <i class="fa fa-fw fa-archive"></i>
+                
+                归档
+            </a>
+        </li>
+        
+        <li>
+            <a href="/about" class="waves-effect waves-light">
+                
+                <i class="fa fa-fw fa-user-circle-o"></i>
+                
+                关于
+            </a>
+        </li>
+        
+        <li>
+            <a href="/friends" class="waves-effect waves-light">
+                
+                <i class="fa fa-fw fa-address-book"></i>
+                
+                友情链接
+            </a>
+        </li>
+        
+        
+        <li><div class="divider"></div></li>
+        <li>
+            <a href="https://github.com/blinkfox/hexo-theme-matery" class="waves-effect waves-light" target="_blank">
+                <i class="fa fa-github-square fa-fw"></i>Fork Me
+            </a>
+        </li>
+        
+    </ul>
+
+    <div class="social-link"><a href="https://github.com/blinkfox" class="tooltipped" target="_blank" data-tooltip="访问我的GitHub" data-position="top" data-delay="50">
+    <i class="fa fa-github"></i>
+</a>
+<a href="mailto:chenjiayin1990@163.com" class="tooltipped" target="_blank" data-tooltip="邮件联系我" data-position="top" data-delay="50">
+    <i class="fa fa-envelope-open"></i>
+</a>
+<a href="#!" class="tooltipped" data-tooltip="QQ联系我: 1181062873" data-position="top" data-delay="50">
+    <i class="fa fa-qq"></i>
+</a>
+</div>
+</div>
+
+            </div>
+        </div>
+
+        
+        <style>
+    .nav-transparent .github-corner {
+        display: none !important;
+    }
+
+    .github-corner {
+        position: absolute;
+        z-index: 10;
+        top: 0;
+        right: 0;
+        border: 0;
+        transform: scale(1.1);
+    }
+
+    .github-corner svg {
+        color: #0f9d58;
+        fill: #fff;
+        height: 64px;
+        width: 64px;
+    }
+
+    .github-corner:hover .octo-arm {
+        animation: a 0.56s ease-in-out;
+    }
+
+    .github-corner .octo-arm {
+        animation: none;
+    }
+
+    @keyframes a {
+        0%,
+        to {
+            transform: rotate(0);
+        }
+        20%,
+        60% {
+            transform: rotate(-25deg);
+        }
+        40%,
+        80% {
+            transform: rotate(10deg);
+        }
+    }
+</style>
+
+<a href="https://github.com/blinkfox/hexo-theme-matery" class="github-corner tooltipped hide-on-med-and-down" target="_blank" data-tooltip="Fork Me" data-position="left" data-delay="50">
+    <svg viewbox="0 0 250 250" aria-hidden="true">
+        <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/>
+        <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"/>
+        <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"/>
+    </svg>
+</a>
+        
+    </nav>
+</header>
+
+
+
+
+
+<div class="bg-cover post-cover" style="background-image: url('/medias/featureimages/17.jpg')">
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m12 l12">
+                <div class="brand">
+                    <div class="description center-align post-title">
+                        序列化相关
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<main class="container content">
+
+    
+    <!-- 文章内容详情 -->
+<div id="artDetail">
+    <div class="card">
+        <div class="card-content article-info">
+            
+            <div class="article-tag">
+                
+                <a href="/tags/JAVA/" target="_blank">
+                    <span class="chip bg-color">JAVA</span>
+                </a>
+                
+                <a href="/tags/笔记/" target="_blank">
+                    <span class="chip bg-color">笔记</span>
+                </a>
+                
+            </div>
+            
+            <div class="post-info">
+                
+
+                <span class="post-date">
+                    <i class="fa fa-clock-o fa-fw"></i>2018-02-10
+                </span>
+				
+				
+                    <span id="busuanzi_container_page_pv" class="post-read">
+                    <i class="fa fa-eye fa-fw"></i>阅读 <span id="busuanzi_value_page_pv"></span>
+				
+            </span></div>
+        </div>
+        <hr>
+        <div class="card-content article-card-content">
+            <div id="articleContent">
+                <h3 id="使用序列化类的私有方法巧妙解决部分属性持久化问题"><a href="#使用序列化类的私有方法巧妙解决部分属性持久化问题" class="headerlink" title="使用序列化类的私有方法巧妙解决部分属性持久化问题"></a>使用序列化类的私有方法巧妙解决部分属性持久化问题</h3><blockquote>
+<p>业务场景</p>
+<blockquote>
+<p>一个计税系统和人力资源系统（HR系统）通过RMI（Remote Method Invocation，远程方法调用）对接，计税系统需要从HR系统获得人员的姓名和基本工资，以作为纳税的依据，而HR系统的工资分为两部分：基本工资和绩效工资，基本工资没什么秘密，根据工作岗位和年限自己都可以计算出来，但绩效工资却是保密的，不能泄露到外系统</p>
+</blockquote>
+</blockquote>
+<a id="more"></a>
+<h4 id="方案-1-transient关键字"><a href="#方案-1-transient关键字" class="headerlink" title="方案(1) transient关键字"></a>方案(1) transient关键字</h4><ul>
+<li>在bonus前加上transient关键字,这是一个方法，但不是一个好方法，加上transient关键字就标志着Salary类失去了分布式部署的功能，它可是HR系统最核心的类了，一旦遭遇性能瓶颈，想再实现分布式部署就不可能了，<strong>此方案否定</strong>。</li>
+</ul>
+<h4 id="方案-2-新增业务对象"><a href="#方案-2-新增业务对象" class="headerlink" title="方案(2) 新增业务对象"></a>方案(2) 新增业务对象</h4><ul>
+<li>增加一个Person4Tax类，完全为计税系统服务，就是说它只有两个属性：姓名和基本工资。符合开闭原则，而且对原系统也没有侵入性，只是增加了工作量而已。这是个方法，但<strong>不是最优方法</strong>。<h4 id="方案-3-请求端过滤"><a href="#方案-3-请求端过滤" class="headerlink" title="方案(3) 请求端过滤"></a>方案(3) 请求端过滤</h4></li>
+<li>在计税系统获得Person对象后，过滤掉Salary的bonus属性，方案可行但不合规矩，因为HR系统中的Salary类安全性竟然让外系统（计税系统）来承担，<strong>设计严重失职</strong>。<h4 id="方案-4-变更传输契约"><a href="#方案-4-变更传输契约" class="headerlink" title="方案(4) 变更传输契约"></a>方案(4) 变更传输契约</h4></li>
+<li>例如改用XML传输，或者重建一个Web Service服务。可以做，但<strong>成本太高</strong>。</li>
+</ul>
+<h4 id="优秀方案"><a href="#优秀方案" class="headerlink" title="优秀方案"></a>优秀方案</h4><ul>
+<li>实现了Serializable接口的类可以实现两个私有方法：writeObject和readObject，以影响和控制序列化和反序列化的过程。 如下</li>
+</ul>
+<pre class=" language-language-java"><code class="language-language-java">    public class Salary implements Serializable {
+        private static final long serialVersionUID = -2140234769839131214L;
+
+        // 脚本工资
+        private Double basePay;
+        // 绩效工资
+        private Double bonus;
+
+        public Salary(Double basePay, Double bonus) {
+            this.basePay = basePay;
+            this.bonus = bonus;
+        }
+        // 省略 get set 方法
+    }
+</code></pre>
+<pre class=" language-language-java"><code class="language-language-java">    public class People implements Serializable {
+        private static final long serialVersionUID = -2092465505451534820L;
+        //姓名
+        private String name;
+        // 绩效
+        private  Salary salary;
+
+        public People(String name, Salary salary) {
+            this.name = name;
+            this.salary = salary;
+        }
+
+        //序列化委托方法
+        private void writeObject(java.io.ObjectOutputStream out) throws IOException {
+            out.defaultWriteObject();
+            out.writeDouble(salary.getBasePay());
+        }
+
+        // 反序列化委托方法
+        private void readObject(java.io.ObjectInputStream in) throws IOException,ClassNotFoundException {
+            in.defaultReadObject();
+            salary = new Salary(new Double(0),in.readDouble());
+        }
+    }
+</code></pre>
+<pre class=" language-language-java"><code class="language-language-java">    public static void main(String[] args) {
+        Salary salary = new Salary(new Double(4000),new Double(5000));
+        People people = new People("zhangsan", salary);
+        System.out.println(JSONObject.toJSONString(people));
+
+        byte[] data = SerializationUtils.serialize(people);
+        People result = (People)SerializationUtils.deserialize(data);
+        System.out.println(JSONObject.toJSONString(result));
+    }
+</code></pre>
+<blockquote>
+<p>打印结果<br>{“name”:”zhangsan”,”salary”:{“basePay”:4000.0,”bonus”:5000.0}}<br>{“name”:”zhangsan”,”salary”:{“basePay”:0.0,”bonus”:4000.0}}</p>
+</blockquote>
+<h3 id="使用序列化实现对象的拷贝"><a href="#使用序列化实现对象的拷贝" class="headerlink" title="使用序列化实现对象的拷贝"></a>使用序列化实现对象的拷贝</h3><blockquote>
+<p>业务场景</p>
+<blockquote>
+<p>如果一个项目中有大量的对象是通过拷贝生成的，那我们该如何处理？每个类都写一个clone方法，并且还要深拷贝？想想看这是何等巨大的工作量呀，是否有更好的方法呢？</p>
+</blockquote>
+</blockquote>
+<ul>
+<li>其实，可以通过序列化方式来处理，在内存中通过字节流的拷贝来实现，也就是把母对象写到一个字节流中，再从字节流中将其读出来，这样就可以重建一个新对象了，该新对象与母对象之间不存在引用共享的问题，也就相当于深拷贝了一个新对象，代码如下：</li>
+</ul>
+<pre class=" language-language-java"><code class="language-language-java">public class CloneUtils {
+    @SuppressWarnings("unchecked")
+    public static <t extends="" serializable=""> T clone(T obj) {
+        T cloneObj = null;
+        try {
+            // 读取对象字节数据
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(bos);
+            oos.writeObject(obj);
+            oos.close();
+            // 分配内存   写入原始对象 生成新对象
+            ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
+            ObjectInputStream ois = new ObjectInputStream(bis);
+            cloneObj= (T)ois.readObject();
+            ois.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return cloneObj;
+    }
+}
+</t></code></pre>
+<p>此工具类要求被拷贝的对象必须<strong>实现Serializable接口</strong>，否则是没办法拷贝的（当然，使用反射那是另外一种技巧） 用此方法需要注意两点:</p>
+<ul>
+<li>对象的内部属性都是可序列化的<br>  如果有内部属性不可序列化，则会抛出序列化异常，这会让调试者很纳闷：生成一个对象怎么会出现序列化异常呢？从这一点来考虑，也需要把CloneUtils工具的异常进行细化处理。</li>
+<li>注意方法和属性的特殊修饰符<br>  比如final、static变量的序列化问题会被引入到对象拷贝中来（参考第1章），这点需要特别注意，同时transient变量（瞬态变量，不进行序列化的变量）也会影响到拷贝的效果。</li>
+</ul>
+<p>当然，采用序列化方式拷贝时还有一个更简单的办法，即<strong>使用Apache下的commons工具包中的SerializationUtils类</strong>，直接使用更加简洁方便。</p>
+<h2 id="边界-边界-还是边界"><a href="#边界-边界-还是边界" class="headerlink" title="边界 边界 还是边界"></a>边界 边界 还是边界</h2><pre class=" language-language-java"><code class="language-language-java">    @Test
+    public void 边界测试() {
+        Integer intMaxNum= 2147483647;
+        intMaxNum += 1;
+        int limit = 10;
+        // 超过边界  判断失效
+        if(intMaxNum < limit) {
+            System.out.println("数字"+intMaxNum+"小于" + limit);
+        }
+    }
+</code></pre>
+<blockquote>
+<p>输出结果<br>数字-2147483648小于10</p>
+</blockquote>
+<h2 id="莫让四舍五入亏了一方"><a href="#莫让四舍五入亏了一方" class="headerlink" title="莫让四舍五入亏了一方"></a>莫让四舍五入亏了一方</h2><blockquote>
+<p>四舍五入。四舍五入是一种近似精确的计算方法，在Java5之前，我们一般是通过使用Math.round来获得指定精度的整数或小数的，这种方法使用非常广泛，<br>代码如下：</p>
+</blockquote>
+<pre class=" language-language-java"><code class="language-language-java">    public static void main (String[] args) {
+        System.out.println("10.5近似值：" + Math.round(10.5));
+        System.out.println("-10.5近似值：" + Math.round(-10.5));
+
+    }
+</code></pre>
+<blockquote>
+<p>输出结果<br>10.5近似值：11<br>-10.5近似值：-10</p>
+</blockquote>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;这是四舍五入的经典案例，也是初级面试官很乐意选择的考题，绝对值相同的两个数字，近似值为什么就不同了呢？这是由Math.round采用的舍入规则所决定的（采用的是正无穷方向舍入规则，后面会讲解）。我们知道四舍五入是有误差的：其误差值是舍入位的一半。<br>我们以舍入运用最频繁的银行利息计算为例来阐述该问题。<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;我们知道银行的盈利渠道主要是利息差，从储户手里收拢资金，然后放贷出去，其间的利息差额便是所获得的利润。对一个银行来说，对付给储户的利息的计算非常频繁，人民银行规定每个季度末月的20日为银行结息日，一年有4次的结息日。<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;场景介绍完毕，我们回过头来看四舍五入，小于5的数字被舍去，大于等于5的数字进位后舍去，由于所有位上的数字都是自然计算出来的，按照概率计算可知，被舍入的数字均匀分布在0到9之间，下面以10笔存款利息计算作为模型，以银行家的身份来思考这个算法：</p>
+<ul>
+<li>四舍。舍弃的数值：0.000、0.001、0.002、0.003、0.004，因为是舍弃的，对银行家来说，就不用付款给储户了，那每舍弃一个数字就会赚取相应的金额：0.000、0.001、0.002、0.003、0.004。</li>
+<li>五入。进位的数值：0.005、0.006、0.007、0.008、0.009，因为是进位，对银行家来说，每进一位就会多付款给储户，也就是亏损了，那亏损部分就是其对应的10进制补数：0.005、0.004、0.003、0.002、0.001。</li>
+</ul>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;因为舍弃和进位的数字是在0到9之间均匀分布的，所以对于银行家来说，每10笔存款的利息因采用四舍五入而获得的盈利是：<br><strong>0.000+0.001+0.002+0.003+0.004-0.005-0.004-0.003-0.002-0.001=-0.005</strong> 也就是说，每10笔的利息计算中就损失0.005元，即每笔利息计算损失0.0005元，这对一家有5千万储户的银行来说（对国内的银行来说，5千万是个很小的数字），每年仅仅因为四舍五入的误差而损失的金额是：</p>
+<pre class=" language-language-java"><code class="language-language-java">    public static void main (String[] args) {
+        //银行账户数量，5千万
+        int accountNum =5000*10000;
+        //按照人行的规定，每个季度末月的20日为银行结息日
+        double cost=0.0005*accountNum*4;
+        System.out.println("银行每年损失的金额："+cost);
+    }
+</code></pre>
+<blockquote>
+<p>输出结果<br>银行每年损失的金额：100000.0</p>
+</blockquote>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;即，每年因为一个算法误差就损失了10万元，事实上以上的假设条件都是非常保守的，实际情况可能损失得更多。那各位可能要说了，银行还要放贷呀，放出去这笔计算误差不就抵消掉了吗？不会抵销，银行的贷款数量是非常有限的，其数量级根本没有办法和存款相比。<br>这个算法误差是由美国银行家发现的（那可是私人银行，钱是自己的，白白损失了可不行），并且对此提出了一个修正算法，叫做银行家舍入（Banker’s Round）的近似算法，其规则如下：</p>
+<ul>
+<li>舍去位的数值小于5时，直接舍去；</li>
+<li>舍去位的数值大于等于6时，进位后舍去；</li>
+<li>当舍去位的数值等于5时，分两种情况：5后面还有其他数字（非0），则进位后舍去；若5后面是0（即5是最后一个数字），则根据5前一位数的奇偶性来判断是否需要进位，奇数进位，偶数舍去。</li>
+</ul>
+<p>以上规则汇总成一句话：</p>
+<blockquote>
+<p>四舍六入五考虑，五后非零就进一，五后为零看奇偶，五前为偶应舍去，五前为奇要进一。</p>
+</blockquote>
+<p>我们举例说明，取2位精度：</p>
+<pre><code>round(10.5551)=10.56
+round(10.555)=10.56
+round(10.545)=10.54
+</code></pre><p>要在Java5以上的版本中使用银行家的舍入法则非常简单，直接使用RoundingMode类提供的Round模式即可，示例代码如下：</p>
+<pre class=" language-language-java"><code class="language-language-java">    public static void main (String[] args) {
+        //存款
+        BigDecimal d=new BigDecimal(888888);
+        //月利率，乘3计算季利率
+        BigDecimal r=new BigDecimal(0.001875*3);
+        //计算利息
+        BigDecimal i=d.multiply(r).setScale(2,RoundingMode.HALF_EVEN);
+        System.out.println("季利息是："+i);
+    }
+</code></pre>
+<blockquote>
+<p>输出结果<br>季利息是：4999.99</p>
+</blockquote>
+<p>在上面的例子中，我们使用了BigDecimal类，并且采用setScale方法设置了精度，同时传递了一个RoundingMode.HALF_EVEN参数表示使用银行家舍入法则进行近似计算，BigDecimal和RoundingMode是一个绝配，想要采用什么舍入模式使用RoundingMode设置即可。目前Java支持以下七种舍入方式：</p>
+<ul>
+<li>ROUND_UP：远离零方向舍入。<br>向远离0的方向舍入，也就是说，向绝对值最大的方向舍入，只要舍弃位非0即进位。</li>
+<li>ROUND_DOWN：趋向零方向舍入。<br>向0方向靠拢，也就是说，向绝对值最小的方向输入，注意：所有的位都舍弃，不存在进位情况。</li>
+<li>ROUND_CEILING：向正无穷方向舍入。<br>向正最大方向靠拢，如果是正数，舍入行为类似于ROUND_UP；如果为负数，则舍入行为类似于ROUND_DOWN。注意：Math.round方法使用的即为此模式。</li>
+<li>ROUND_FLOOR：向负无穷方向舍入。<br>向负无穷方向靠拢，如果是正数，则舍入行为类似于ROUND_DOWN；如果是负数，则舍入行为类似于ROUND_UP。</li>
+<li>HALF_UP：最近数字舍入（5进）。<br>这就是我们最最经典的四舍五入模式。</li>
+<li>HALF_DOWN：最近数字舍入（5舍）。<br>在四舍五入中，5是进位的，而在HALF_DOWN中却是舍弃不进位。</li>
+<li>HALF_EVEN：银行家算法。<br>在普通的项目中舍入模式不会有太多影响，可以直接使用Math.round方法，但在大量与货币数字交互的项目中，一定要选择好近似的计算模式，尽量减少因算法不同而造成的损失。</li>
+</ul>
+
+            </div>
+            <hr>
+
+            
+            <style>
+    #reward {
+        margin: 40px 0;
+        text-align: center;
+    }
+
+    #reward .reward-link {
+        font-size: 1.88rem;
+    }
+
+    #reward .btn-floating:hover {
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2), 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    #rewardModal {
+        width: 320px;
+        height: 350px;
+    }
+
+    #rewardModal .reward-title {
+        margin: 15px auto;
+        padding-bottom: 5px;
+    }
+
+    #rewardModal .modal-content {
+        padding: 10px;
+    }
+
+    #rewardModal .close {
+        position: absolute;
+        right: 15px;
+        top: 15px;
+        color: rgba(0, 0, 0, 0.5);
+        font-size: 1.3rem;
+        line-height: 20px;
+        cursor: pointer;
+    }
+
+    #rewardModal .reward-tabs {
+        margin: 0 auto;
+        width: 210px;
+    }
+
+    .reward-tabs .tabs {
+        height: 38px;
+        margin: 10px auto;
+        padding-left: 0;
+    }
+
+    .reward-tabs .tabs .tab {
+        height: 38px;
+        line-height: 38px;
+    }
+
+    .reward-tabs .tab a {
+        color: #fff;
+        background-color: #ccc;
+    }
+
+    .reward-tabs .tab a:hover {
+        color: #fff;
+    }
+
+    .reward-tabs .wechat-tab .active {
+        color: #fff;
+        background-color: #22AB38;
+    }
+
+    .reward-tabs .alipay-tab .active {
+        color: #fff;
+        background-color: #019FE8;
+    }
+
+    .reward-tabs .reward-img {
+        width: 210px;
+        height: 210px;
+    }
+</style>
+
+<div id="reward">
+    <a class="reward-link btn-floating btn-large waves-effect waves-light red">赏</a>
+
+    <!-- Modal Structure -->
+    <div id="rewardModal" class="modal">
+        <div class="modal-content">
+            <a class="close"><i class="fa fa-close"></i></a>
+            <h4 class="reward-title">你的赏识是我前进的动力</h4>
+            <div class="reward-content">
+                <div class="reward-tabs">
+                    <ul class="tabs">
+                        <li class="tab wechat-tab waves-effect waves-light"><a class="active" href="#wechat">微信</a></li>
+                        <li class="tab alipay-tab waves-effect waves-light"><a href="#alipay">支付宝</a></li>
+                    </ul>
+                    <div id="wechat">
+                        <img src="/medias/reward/wechat.png" class="reward-img" alt="微信打赏二维码">
+                    </div>
+                    <div id="alipay">
+                        <img src="/medias/reward/alipay.jpg" class="reward-img" alt="支付宝打赏二维码">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(function () {
+        $('#reward .reward-link').on('click', function () {
+            $('#rewardModal').openModal();
+        });
+
+        $('#rewardModal .close').on('click', function () {
+            $('#rewardModal').closeModal();
+        });
+    });
+</script>
+            
+
+            <link rel="stylesheet" type="text/css" href="/libs/share/css/share.min.css">
+
+<div id="article-share">
+    
+    <div class="social-share" data-disabled="qzone" data-wechat-qrcode-helper="<p>微信里点“发现”->“扫一扫”二维码便可查看分享。</p>"></div>
+    
+</div>
+
+<script src="/libs/share/js/social-share.min.js"></script>
+
+            <div class="reprint">
+                <p>
+                    <span class="reprint-tip">转载请注明: </span>
+                    <a href="http://www.xhlcode.cn" class="b-link-green">淡定独行</a>
+                    <i class="fa fa-angle-right fa-lg fa-fw text-color"></i>
+                    <a href="/2018/02/10/xu-lie-hua-xiang-guan/" class="b-link-green">序列化相关</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+<article id="prenext-posts" class="prev-next articles">
+    <div class="row article-row">
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge left-badge text-color">上一篇</div>
+            <div class="card">
+                <a href="/2018/02/12/java-8-zhong-de-streams-api-xiang-jie/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/5.jpg" class="responsive-img" alt="Java 8 中的 Streams API 详解">
+                        
+                        <span class="card-title">Java 8 中的 Streams API 详解</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary">为什么需要 StreamStream 作为 Java 8 的一大亮点，它与 java.io 包里的 InputStream 和 OutputStream是完全不同的概念。它也不同于 StAX 对 XML 解析的 Stream，也不是 Ama</div>
+                    <div class="publish-info">
+                        <span class="publish-date">
+                            <i class="fa fa-clock-o fa-fw icon-date"></i>2018-02-12
+                        </span>
+                        <span class="publish-author">
+                            
+                            <i class="fa fa-user fa-fw"></i>
+                            xhlcode
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/JAVA/" target="_blank">
+                        <span class="chip bg-color">JAVA</span>
+                    </a>
+                    
+                    <a href="/tags/笔记/" target="_blank">
+                        <span class="chip bg-color">笔记</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge right-badge text-color">本篇</div>
+            <div class="card">
+                <a href="/2018/02/10/xu-lie-hua-xiang-guan/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/17.jpg" class="responsive-img" alt="序列化相关">
+                        
+                        <span class="card-title">序列化相关</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary">使用序列化类的私有方法巧妙解决部分属性持久化问题
+业务场景
+
+一个计税系统和人力资源系统（HR系统）通过RMI（Remote Method Invocation，远程方法调用）对接，计税系统需要从HR系统获得人员的姓名和基本工资，以作为纳税</div>
+                    <div class="publish-info">
+                            <span class="publish-date">
+                                <i class="fa fa-clock-o fa-fw icon-date"></i>2018-02-10
+                            </span>
+                        <span class="publish-author">
+                            
+                            <i class="fa fa-user fa-fw"></i>
+                            xhlcode
+                            
+                        </span>
+                    </div>
+                </div>
+
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/JAVA/" target="_blank">
+                        <span class="chip bg-color">JAVA</span>
+                    </a>
+                    
+                    <a href="/tags/笔记/" target="_blank">
+                        <span class="chip bg-color">笔记</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+    </div>
+</article>
+</div>
+
+
+    
+
+</main>
+
+
+<footer class="page-footer bg-color">
+    <div class="container row center-align">
+        <div class="col s12 m8 l8 copy-right">
+            本站由&copy;<a href="https://blinkfox.github.io/" target="_blank">Blinkfox</a>基于
+            <a href="https://hexo.io/" target="_blank">Hexo</a> 的
+            <a href="https://github.com/blinkfox/hexo-theme-matery" target="_blank">hexo-theme-matery</a>主题搭建.
+
+            
+			
+                <br>
+                <span id="busuanzi_container_site_pv">
+                    本站总访问量 <span id="busuanzi_value_site_pv" style="color: #fff;"></span> 次,&nbsp;
+                </span>
+				<span id="busuanzi_container_site_uv">
+                    访客数 <span id="busuanzi_value_site_uv" style="color: #fff;"></span> 人.
+                </span>
+			
+        </div>
+        <div class="col s12 m4 l4 social-link social-statis"><a href="https://github.com/blinkfox" class="tooltipped" target="_blank" data-tooltip="访问我的GitHub" data-position="top" data-delay="50">
+    <i class="fa fa-github"></i>
+</a>
+<a href="mailto:chenjiayin1990@163.com" class="tooltipped" target="_blank" data-tooltip="邮件联系我" data-position="top" data-delay="50">
+    <i class="fa fa-envelope-open"></i>
+</a>
+<a href="#!" class="tooltipped" data-tooltip="QQ联系我: 1181062873" data-position="top" data-delay="50">
+    <i class="fa fa-qq"></i>
+</a>
+</div>
+    </div>
+</footer>
+
+<div class="progress-bar"></div>
+
+
+<!-- 搜索遮罩框 -->
+<div id="searchModal" class="modal">
+    <div class="modal-content">
+        <div class="search-header">
+            <span class="title">搜索</span>
+            <input type="search" id="searchInput" name="s" placeholder="请输入搜索的关键字" class="search-input" autofocus>
+        </div>
+        <div id="searchResult"></div>
+    </div>
+</div>
+
+<script src="/js/search.js"></script>
+<script type="text/javascript">
+    searchFunc("/" + "search.xml", 'searchInput', 'searchResult');
+</script>
+<!-- 回到顶部按钮 -->
+<div id="backTop" class="top-scroll">
+    <a class="btn-floating btn-large waves-effect waves-light" href="#!">
+        <i class="fa fa-angle-up"></i>
+    </a>
+</div>
+
+
+<script src="/libs/materialize/js/materialize.min.js"></script>
+<script src="/libs/masonry/masonry.pkgd.min.js"></script>
+<script src="/libs/aos/aos.js"></script>
+<script src="/libs/scrollprogress/scrollProgress.min.js"></script>
+<script src="/libs/lightGallery/js/lightgallery-all.min.js"></script>
+<script src="/js/matery.js"></script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+
+
+
+    <script src="/libs/others/clicklove.js"></script>
+
+
+    <script async src="/libs/others/busuanzi.pure.mini.js"></script>
+
+
+</body>
+</html>
